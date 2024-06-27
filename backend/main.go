@@ -20,6 +20,13 @@ type Bank struct {
 	BankName   string `json:"bank_name"`
 }
 
+type Branch struct {
+	BranchCode string `json:"branch_code"`
+	BankName   string `json:"bank_name"`
+	Phone      string `json:"phone"`
+	Address    string `json:"address"`
+}
+
 var db *sql.DB
 
 func main() {
@@ -145,9 +152,9 @@ func getBankBranchesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(branches)
 }
 
-func queryBranches(bankCode string) ([]Bank, error) {
-	// 執行 SQL 查詢，選取符合 bank_code 的分行資料
-	query := "SELECT branch_code, bank_name FROM banks WHERE bank_code = ?"
+func queryBranches(bankCode string) ([]Branch, error) {
+	// 執行 SQL 查詢，選取符合 bank_code 的分行資料，包括分行名稱、電話和地址
+	query := "SELECT branch_code, bank_name, phone, address FROM banks WHERE bank_code = ?"
 	rows, err := db.Query(query, bankCode)
 	if err != nil {
 		return nil, err
@@ -155,17 +162,16 @@ func queryBranches(bankCode string) ([]Bank, error) {
 	defer rows.Close()
 
 	// 建立用於儲存分行資訊的空切片
-	var branches []Bank
+	var branches []Branch
 
 	// 迭代處理查詢結果的每一行
 	for rows.Next() {
 		// 暫存每一行資料庫查詢得到的結果
-		var branch Bank
-		err := rows.Scan(&branch.BranchCode, &branch.BankName)
+		var branch Branch
+		err := rows.Scan(&branch.BranchCode, &branch.BankName, &branch.Phone, &branch.Address)
 		if err != nil {
 			return nil, err
 		}
-		branch.BankCode = bankCode // 將 bank_code 添加到返回的結構中
 		branches = append(branches, branch)
 	}
 	if err := rows.Err(); err != nil {
