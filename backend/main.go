@@ -54,6 +54,7 @@ func main() {
 	// 設置 API 端點 "/api/banks" 的處理函式
 	r.Get("/api/banks", getBanksHandler)
 
+
 	// 設置 API 端點 "/api/banks/{bank_code}/branches/{branch_code}" 的處理函式
 	r.Get("/api/banks/{bank_code}/branches/{branch_code}", getBranchHandler)
 
