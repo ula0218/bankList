@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BrowserRouter as Router, Route, Routes, Link, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useParams, useNavigate } from 'react-router-dom';
 import './App.css';
 
 function Home() {
@@ -113,7 +113,7 @@ function Home() {
   const uniqueBankCodes = [...new Set(banks.map(bank => bank.bank_code))];
 
   return (
-    <div>
+    <div className="container">
       <h1>台灣銀行代碼查詢</h1>
       <div className="select-container">
         <div>
@@ -150,6 +150,7 @@ function Home() {
             <a href="https://data.gov.tw/dataset/6041" target="_blank" rel="noopener noreferrer">政府資料公開平台</a>
           </div>
           <button onClick={clearSelection}>清除查詢</button>
+          <br />
           <button onClick={copyBranchURL}>複製分行網址</button>
         </div>
       )}
