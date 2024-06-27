@@ -1,46 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { BrowserRouter as Router, Route, Routes, Link, useParams, useNavigate } from 'react-router-dom';
 import './App.css';
 
-function App() {
+function Home() {
   const [banks, setBanks] = useState([]);
   const [selectedBankCode, setSelectedBankCode] = useState('');
   const [bankBranches, setBankBranches] = useState([]);
+  const [selectedBranchCode, setSelectedBranchCode] = useState('');
   const [selectedBranchInfo, setSelectedBranchInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { bankCode: paramBankCode, branchCode: paramBranchCode } = useParams();
 
   useEffect(() => {
     fetchBanks();
-  }, []);
+    if (paramBankCode) {
+      setSelectedBankCode(paramBankCode);
+      if (paramBranchCode) {
+        setSelectedBranchCode(paramBranchCode);
+        fetchSelectedBranchInfo(paramBankCode, paramBranchCode);
+      }
+    }
+  }, [paramBankCode, paramBranchCode]);
 
   const fetchBanks = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/banks');
+      setLoading(true);
+      const response = await axios.get('/api/banks');
       setBanks(response.data);
-      setSelectedBankCode(''); // 清空選擇的銀行代碼
-      setBankBranches([]);    // 清空分行列表
-      setSelectedBranchInfo(null); // 清空選擇的分行詳細資訊
     } catch (error) {
       console.error('Error fetching banks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBankBranches = async (bankCode) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/banks/${bankCode}/branches`);
+      setBankBranches(response.data);
+      setSelectedBranchCode(''); // 清空選擇的分行代碼
+      setSelectedBranchInfo(null); // 清空選擇的分行詳細資訊
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSelectedBranchInfo = async (bankCode, branchCode) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/banks/${bankCode}/branches/${branchCode}`);
+      setSelectedBranchInfo(response.data);
+    } catch (error) {
+      console.error('Error fetching selected branch info:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBankCodeSelect = async (bankCode) => {
     setSelectedBankCode(bankCode);
-    try {
-      const response = await axios.get(`http://localhost:8080/api/banks/${bankCode}/branches`);
-      setBankBranches(response.data);
-      setSelectedBranchInfo(null); // 清空選擇的分行詳細資訊
-    } catch (error) {
-      console.error('Error fetching branches:', error);
-    }
+    fetchBankBranches(bankCode);
   };
 
   const handleBranchSelect = async (branchCode) => {
+    setSelectedBranchCode(branchCode);
     const selectedBranch = bankBranches.find(branch => branch.branch_code === branchCode);
-    if (selectedBranch) {
-      setSelectedBranchInfo(selectedBranch);
-    } else {
-      setSelectedBranchInfo(null);
+    setSelectedBranchInfo(selectedBranch || null);
+    if (selectedBankCode && branchCode) {
+      navigate(`/banks/${selectedBankCode}/${branchCode}`);
     }
   };
 
@@ -53,6 +85,27 @@ function App() {
         .catch(err => {
           console.error('Error copying branch code:', err);
           alert('複製分行代碼失敗，請手動複製。');
+        });
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedBankCode('');
+    setSelectedBranchCode('');
+    setSelectedBranchInfo(null);
+    navigate('/');
+  };
+
+  const copyBranchURL = () => {
+    if (selectedBranchInfo) {
+      const branchURL = `${window.location.origin}/banks/${selectedBankCode}/${selectedBranchCode}`;
+      navigator.clipboard.writeText(branchURL)
+        .then(() => {
+          alert(`已複製分行網址 ${branchURL} 到剪貼板！`);
+        })
+        .catch(err => {
+          console.error('Error copying branch URL:', err);
+          alert('複製分行網址失敗，請手動複製。');
         });
     }
   };
@@ -76,7 +129,7 @@ function App() {
         </div>
         <div>
           <h2>分行名稱:</h2>
-          <select onChange={(e) => handleBranchSelect(e.target.value)} value={selectedBranchInfo ? selectedBranchInfo.branch_code : ''}>
+          <select onChange={(e) => handleBranchSelect(e.target.value)} value={selectedBranchCode}>
             <option value="">選擇分行</option>
             {bankBranches.map(branch => (
               <option key={branch.branch_code} value={branch.branch_code}>
@@ -94,15 +147,28 @@ function App() {
           <p><strong>分行電話:</strong> {selectedBranchInfo.phone}</p>
           <p><strong>分行地址:</strong> {selectedBranchInfo.address}</p>
           <div>
-            <button onClick={fetchBanks}>重新查詢清空</button>
+            <a href="https://data.gov.tw/dataset/6041" target="_blank" rel="noopener noreferrer">政府資料公開平台</a>
           </div>
-          <a href="https://data.gov.tw/dataset/6041" target="blank" >政府資料公開平台</a>
+          <button onClick={clearSelection}>清除查詢</button>
+          <button onClick={copyBranchURL}>複製分行網址</button>
         </div>
-        
       )}
+      {loading && <p>Loading...</p>}
     </div>
   );
 }
 
-export default App;
+function App() {
+  return (
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/banks/:bankCode/:branchCode" element={<Home />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
 
+export default App;
