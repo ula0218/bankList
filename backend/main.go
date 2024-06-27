@@ -57,6 +57,9 @@ func main() {
 	// 設置 API 端點 "/api/banks/{bank_code}/branches" 的處理函式
 	r.Get("/api/banks/{bank_code}/branches", getBankBranchesHandler)
 
+	// 設置 API 端點 "/api/banks/{bank_code}/branches/{branch_code}" 的處理函式
+	r.Get("/api/banks/{bank_code}/branches/{branch_code}", getBranchHandler)
+
 	// 設置 CORS 中介軟件
 	handler := cors.Handler(r)
 
@@ -179,4 +182,46 @@ func queryBranches(bankCode string) ([]Branch, error) {
 	}
 
 	return branches, nil
+}
+
+func getBranchHandler(w http.ResponseWriter, r *http.Request) {
+	// 從 URL 參數中獲取 bank_code 和 branch_code
+	bankCode := chi.URLParam(r, "bank_code")
+	branchCode := chi.URLParam(r, "branch_code")
+
+	branch, err := queryBranch(bankCode, branchCode)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error querying branch: %v", err), http.StatusInternalServerError)
+		log.Printf("Error querying branch for bank_code %s and branch_code %s: %v", bankCode, branchCode, err)
+		return
+	}
+
+	if branch == nil {
+		http.Error(w, fmt.Sprintf("No branch found for bank_code %s and branch_code %s", bankCode, branchCode), http.StatusNotFound)
+		log.Printf("No branch found for bank_code %s and branch_code %s", bankCode, branchCode)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(branch)
+}
+
+func queryBranch(bankCode string, branchCode string) (*Branch, error) {
+	// 執行 SQL 查詢，選取符合 bank_code 和 branch_code 的分行資料，包括分行名稱、電話和地址
+	query := "SELECT branch_code, bank_name, phone, address FROM banks WHERE bank_code = ? AND branch_code = ?"
+	row := db.QueryRow(query, bankCode, branchCode)
+
+	// 建立用於儲存分行資訊的變數
+	var branch Branch
+
+	// 將查詢結果存入變數
+	err := row.Scan(&branch.BranchCode, &branch.BankName, &branch.Phone, &branch.Address)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &branch, nil
 }
