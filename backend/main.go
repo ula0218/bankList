@@ -54,9 +54,6 @@ func main() {
 	// 設置 API 端點 "/api/banks" 的處理函式
 	r.Get("/api/banks", getBanksHandler)
 
-	// 設置 API 端點 "/api/banks/{bank_code}/branches" 的處理函式
-	r.Get("/api/banks/{bank_code}/branches", getBankBranchesHandler)
-
 	// 設置 API 端點 "/api/banks/{bank_code}/branches/{branch_code}" 的處理函式
 	r.Get("/api/banks/{bank_code}/branches/{branch_code}", getBranchHandler)
 
@@ -132,56 +129,6 @@ func queryBanks() ([]Bank, error) {
 	}
 
 	return banks, nil
-}
-
-func getBankBranchesHandler(w http.ResponseWriter, r *http.Request) {
-	// 從 URL 參數中獲取 bank_code
-	bankCode := chi.URLParam(r, "bank_code")
-
-	branches, err := queryBranches(bankCode)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error querying branches: %v", err), http.StatusInternalServerError)
-		log.Printf("Error querying branches for bank_code %s: %v", bankCode, err)
-		return
-	}
-
-	if branches == nil {
-		http.Error(w, fmt.Sprintf("No branches found for bank_code %s", bankCode), http.StatusNotFound)
-		log.Printf("No branches found for bank_code %s", bankCode)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(branches)
-}
-
-func queryBranches(bankCode string) ([]Branch, error) {
-	// 執行 SQL 查詢，選取符合 bank_code 的分行資料，包括分行名稱、電話和地址
-	query := "SELECT branch_code, bank_name, phone, address FROM banks WHERE bank_code = ?"
-	rows, err := db.Query(query, bankCode)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	// 建立用於儲存分行資訊的空切片
-	var branches []Branch
-
-	// 迭代處理查詢結果的每一行
-	for rows.Next() {
-		// 暫存每一行資料庫查詢得到的結果
-		var branch Branch
-		err := rows.Scan(&branch.BranchCode, &branch.BankName, &branch.Phone, &branch.Address)
-		if err != nil {
-			return nil, err
-		}
-		branches = append(branches, branch)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return branches, nil
 }
 
 func getBranchHandler(w http.ResponseWriter, r *http.Request) {
