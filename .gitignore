@@ -1,2 +1,5 @@
-**/.env
-**/backend/data.csv
+# Ignore .env file
+.env
+
+# Ignore data.csv in the backend folder
+/backend/data.csv
