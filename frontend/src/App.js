@@ -96,6 +96,7 @@ function App() {
           <div>
             <button onClick={fetchBanks}>重新查詢清空</button>
           </div>
+          <a href="https://data.gov.tw/dataset/6041" target="blank" >政府資料公開平台</a>
         </div>
         
       )}
